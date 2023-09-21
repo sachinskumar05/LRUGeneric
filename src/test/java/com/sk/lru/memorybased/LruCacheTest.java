@@ -1,10 +1,14 @@
-package com.sk.lru;
+package com.sk.lru.memorybased;
 
+import com.sk.lru.memorybased.LruCache;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
@@ -12,14 +16,25 @@ import static org.junit.Assert.*;
 /**
  * Unit tests for {@link LruCache}.
  *
- * */
-public class LruCachePerfomenceTest {
+ */
+public class LruCacheTest {
 
-    private final long maxCapacity = 1000000;
+    private static final String A = "A";
+
+    private static final String B = "B";
+
+    private static final String C = "C";
+
+    private static final String D = "D";
+
+    private static final String E = "E";
+
     private LruCache<String, String> cache;
+
     private static void assertMiss(LruCache<String, String> cache, String key) {
         assertNull(cache.get(key));
     }
+
     private static void assertHit(LruCache<String, String> cache, String key, String value) {
         assertThat(cache.get(key), is(value));
     }
@@ -35,7 +50,7 @@ public class LruCachePerfomenceTest {
 
     @Before
     public void setUp() {
-        cache = new LruCache<>(maxCapacity);
+        cache = new LruCache<>(3);
     }
 
     @After
@@ -46,48 +61,40 @@ public class LruCachePerfomenceTest {
 
     @Test
     public void defaultMemorySize() {
-        assertThat(cache.getMaxMemorySize(), is(maxCapacity * 1024 * 1024));
+        assertThat(cache.getMaxMemorySize(), is(100L * 1024 * 1024));
     }
 
     @Test
     public void logic() {
-        long startNano = System.nanoTime();
-        String first_uuid = java.util.UUID.randomUUID().toString();
-        cache.put(first_uuid, first_uuid);
-        assertHit(cache, first_uuid, first_uuid);
+        cache.put("a", A);
+        assertHit(cache, "a", A);
+        cache.put("b", B);
+        assertHit(cache, "a", A);
+        assertHit(cache, "b", B);
+        assertSnapshot(cache, "a", A, "b", B);
 
-        String second_uuid = java.util.UUID.randomUUID().toString();
-        cache.put(second_uuid, second_uuid);
-        assertHit(cache, second_uuid, second_uuid);
+        cache.put("c", C);
+        assertHit(cache, "a", A);
+        assertHit(cache, "b", B);
+        assertHit(cache, "c", C);
+        assertSnapshot(cache, "a", A, "b", B, "c", C);
 
-        String uuid = null;
-        for (int i = 0; i < 999998; i++) {
-            uuid = java.util.UUID.randomUUID().toString();
-            cache.put(uuid, uuid);
-//            assertHit(cache, uuid, uuid);
-        }
-        String one_millth_uuid = uuid;
+        cache.put("d", D);
+        assertMiss(cache, "a");
+        assertHit(cache, "b", B);
+        assertHit(cache, "c", C);
+        assertHit(cache, "d", D);
+        assertHit(cache, "b", B);
+        assertHit(cache, "c", C);
+        assertSnapshot(cache, "d", D, "b", B, "c", C);
 
-        System.out.println("insert into cache time taken in micro = " + (System.nanoTime() - startNano)/1000  );
-
-        String last_uuid = java.util.UUID.randomUUID().toString();
-        long start = System.nanoTime();
-        cache.put(last_uuid, last_uuid);
-        System.out.println("insertion and eviction cache time taken in micro = " + (System.nanoTime() - start)/1000  );
-        assertHit(cache, last_uuid, last_uuid);
-        assertMiss(cache, first_uuid);
-
-        for (int i = 0; i < 1000; i++) {
-            last_uuid = java.util.UUID.randomUUID().toString();
-            start = System.nanoTime();
-            cache.put(last_uuid, last_uuid);
-            System.out.println("insertion and eviction cache time taken in micro = " + (System.nanoTime() - start)/1000  );
-        }
-        assertHit(cache, last_uuid, last_uuid);
-        assertMiss(cache, second_uuid);
-
-        assertHit(cache, one_millth_uuid, one_millth_uuid);
-
+        cache.put("e", E);
+        assertMiss(cache, "d");
+        assertMiss(cache, "a");
+        assertHit(cache, "e", E);
+        assertHit(cache, "b", B);
+        assertHit(cache, "c", C);
+        assertSnapshot(cache, "e", E, "b", B, "c", C);
     }
 
     @Test
@@ -123,18 +130,18 @@ public class LruCachePerfomenceTest {
     @Test
     public void evictionWithSingletonCache() {
         LruCache<String, String> cache = new LruCache<>(1);
-        cache.put("a", "A");
-        cache.put("b", "B");
-        assertSnapshot(cache, "b", "B");
+        cache.put("a", A);
+        cache.put("b", B);
+        assertSnapshot(cache, "b", B);
     }
 
     @Test
     public void removeOneItem() {
         LruCache<String, String> cache = new LruCache<>(1);
-        cache.put("a", "A");
-        cache.put("b", "B");
+        cache.put("a", A);
+        cache.put("b", B);
         assertNull(cache.remove("a"));
-        assertSnapshot(cache, "b", "B");
+        assertSnapshot(cache, "b", B);
     }
 
     @Test
@@ -153,11 +160,11 @@ public class LruCachePerfomenceTest {
      */
     @Test
     public void putCauseEviction() {
-        cache.put("a", "A");
-        cache.put("b", "B");
-        cache.put("c", "C");
-        cache.put("b", "D");
-        assertSnapshot(cache, "a", "A", "c", "C", "b", "D");
+        cache.put("a", A);
+        cache.put("b", B);
+        cache.put("c", C);
+        cache.put("b", D);
+        assertSnapshot(cache, "a", A, "c", C, "b", D);
     }
 
     @Test

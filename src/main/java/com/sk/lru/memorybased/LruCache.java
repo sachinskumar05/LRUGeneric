@@ -1,4 +1,4 @@
-package com.sk.lru;
+package com.sk.lru.memorybased;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

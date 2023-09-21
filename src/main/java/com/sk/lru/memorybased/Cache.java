@@ -1,4 +1,4 @@
-package com.sk.lru;
+package com.sk.lru.memorybased;
 
 /**
  * A memory cache interface.
